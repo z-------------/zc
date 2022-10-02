@@ -142,11 +142,8 @@ proc evaluate*(instructions: Expression; argument = 0.0): Option[float] =
   let instructions = seq[Instruction](instructions)
 
   var stack = @[argument]
-  var programCounter = 0
-
-  while programCounter < instructions.len:
-    instructions[programCounter](stack)
-    inc programCounter
+  for instruction in instructions:
+    instruction(stack)
 
   if stack.len >= 1:
     stack.pop.some
