@@ -19,11 +19,10 @@ import ./nodes
 import ./tokenize
 import ./parse
 import std/[
-  options,
-  typetraits,
-  sugar,
   math,
+  options,
   strutils,
+  typetraits,
 ]
 
 export options
@@ -35,52 +34,24 @@ type
 template none(): untyped =
   none(genericParams(typeof result).get(0))
 
-func uniFunc(stack: var seq[float]; f: proc (a: float): float) =
-  stack.add(f(stack.pop))
-
-func biFunc(stack: var seq[float]; f: proc (a, b: float): float) =
-  let
-    b = stack.pop
-    a = stack.pop
-  stack.add(f(a, b))
-
 # instructions
 
-func instructionAdd(stack: var seq[float]) =
-  biFunc(stack, (a, b) => a + b)
+template uniFunc(expr: untyped): Instruction =
+  (func (stack: var seq[float]) =
+    let a = stack.pop
+    stack.add(expr(a))
+  )
 
-func instructionSubtract(stack: var seq[float]) =
-  biFunc(stack, (a, b) => a - b)
+template biFunc(expr: untyped): Instruction =
+  (func (stack: var seq[float]) =
+    let
+      b {.inject.} = stack.pop
+      a {.inject.} = stack.pop
+    stack.add(expr)
+  )
 
-func instructionMultiply(stack: var seq[float]) =
-  biFunc(stack, (a, b) => a * b)
-
-func instructionDivide(stack: var seq[float]) =
-  biFunc(stack, (a, b) => (if b == 0: float.high else: a / b))
-
-func instructionPower(stack: var seq[float]) =
-  biFunc(stack, pow)
-
-func instructionSin(stack: var seq[float]) =
-  uniFunc(stack, sin)
-
-func instructionCos(stack: var seq[float]) =
-  uniFunc(stack, cos)
-
-func instructionTan(stack: var seq[float]) =
-  uniFunc(stack, tan)
-
-func instructionAbs(stack: var seq[float]) =
-  uniFunc(stack, a => abs(a))
-
-func instructionSqrt(stack: var seq[float]) =
-  uniFunc(stack, sqrt)
-
-func instructionPushArgument(stack: var seq[float]) =
-  stack.add(stack[0])
-
-func getInstructionPush(value: float): proc (stack: var seq[float]) =
-  (proc (stack: var seq[float]) =
+template pushVal(value: float): Instruction =
+  (func (stack: var seq[float]) =
     stack.add(value)
   )
 
@@ -101,31 +72,31 @@ func compile(node: Node): Option[Expression] =
     let funcName = node.value
     instructions.add:
       case funcName
-      of "+": instructionAdd
-      of "-": instructionSubtract
-      of "*": instructionMultiply
-      of "/": instructionDivide
-      of "^": instructionPower
-      of "sin": instructionSin
-      of "cos": instructionCos
-      of "tan": instructionTan
-      of "abs": instructionAbs
-      of "sqrt": instructionSqrt
+      of "+": biFunc(a + b)
+      of "-": biFunc(a - b)
+      of "*": biFunc(a * b)
+      of "/": biFunc(a / b)
+      of "^": biFunc(a.pow(b))
+      of "sin": uniFunc(sin)
+      of "cos": uniFunc(cos)
+      of "tan": uniFunc(tan)
+      of "abs": uniFunc(abs)
+      of "sqrt": uniFunc(sqrt)
       else:
         return none()
   of Ident:
     let ident = node.value
     instructions.add:
       case ident
-      of "x": instructionPushArgument
-      of "e": getInstructionPush(math.E)
-      of "tau": getInstructionPush(math.Tau)
-      of "pi": getInstructionPush(math.Pi)
+      of "x": (func (stack: var seq[float]) = stack.add(stack[0]))
+      of "e": pushVal(math.E)
+      of "tau": pushVal(math.Tau)
+      of "pi": pushVal(math.Pi)
       else:
         return none()
   of Literal:
     let value = parseFloat(node.value)
-    instructions.add(getInstructionPush(value))
+    instructions.add(pushVal(value))
 
   Expression(instructions).some
 
