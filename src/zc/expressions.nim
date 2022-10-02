@@ -80,6 +80,9 @@ func compile(node: Node): Option[Expression] =
       of "sin": uniFunc(sin)
       of "cos": uniFunc(cos)
       of "tan": uniFunc(tan)
+      of "asin": uniFunc(arcsin)
+      of "acos": uniFunc(arccos)
+      of "atan": uniFunc(arctan)
       of "abs": uniFunc(abs)
       of "sqrt": uniFunc(sqrt)
       else:
