@@ -46,3 +46,7 @@ test "idents work":
   checkExprValue "e", math.E
   checkExprValue "tau", math.Tau
   checkExprValue "pi", math.Pi
+
+test "error on invalid input":
+  check compile"pi(2)".isNone
+  check evaluate"pi(2)".isNone
